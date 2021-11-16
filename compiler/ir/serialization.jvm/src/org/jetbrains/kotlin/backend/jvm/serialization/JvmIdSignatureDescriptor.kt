@@ -9,25 +9,38 @@ import org.jetbrains.kotlin.backend.common.serialization.mangle.SpecialDeclarati
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureDescriptor
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
+import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.KotlinMangler
 import org.jetbrains.kotlin.load.java.descriptors.JavaForKotlinOverridePropertyDescriptor
 import org.jetbrains.kotlin.load.java.lazy.descriptors.LazyJavaPackageFragment
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.overriddenTreeAsSequence
 import org.jetbrains.kotlin.synthetic.SyntheticJavaPropertyDescriptor
 import org.jetbrains.kotlin.types.typeUtil.contains
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 
-class JvmIdSignatureDescriptor(private val mangler: KotlinMangler.DescriptorMangler) : IdSignatureDescriptor(mangler) {
+class JvmIdSignatureDescriptor(mangler: KotlinMangler.DescriptorMangler) : IdSignatureDescriptor(mangler) {
 
-    private inner class JvmDescriptorBasedSignatureBuilder(mangler: KotlinMangler.DescriptorMangler, type: SpecialDeclarationType) :
-        DescriptorBasedSignatureBuilder(mangler, type) {
+    private inner class JvmDescriptorBasedSignatureBuilder(type: SpecialDeclarationType) :
+        DescriptorBasedSignatureBuilder(type) {
+
+        override val currentFileSignature: IdSignature.FileSignature?
+            get() = externallyGivenFileSignature ?: storedFileSignature
+
         override fun platformSpecificFunction(descriptor: FunctionDescriptor) {
             keepTrackOfOverridesForPossiblyClashingFakeOverride(descriptor)
+            computeStoredFileSignature(descriptor)
         }
 
         override fun isKotlinPackage(descriptor: PackageFragmentDescriptor): Boolean {
-            return descriptor !is LazyJavaPackageFragment
+            return true
+//            return descriptor !is LazyJavaPackageFragment
+        }
+
+        override fun platformSpecificClass(descriptor: ClassDescriptor) {
+            // Classes in JVM have unique names and do not need composite signatures (nor is one recoverable from deserialized descriptor).
+            isTopLevelPrivate = false
         }
 
         override fun platformSpecificProperty(descriptor: PropertyDescriptor) {
@@ -35,14 +48,17 @@ class JvmIdSignatureDescriptor(private val mangler: KotlinMangler.DescriptorMang
             setSpecialJavaProperty(descriptor is JavaForKotlinOverridePropertyDescriptor)
             setSyntheticJavaProperty(descriptor is SyntheticJavaPropertyDescriptor)
             keepTrackOfOverridesForPossiblyClashingFakeOverride(descriptor)
+            computeStoredFileSignature(descriptor)
         }
 
         override fun platformSpecificGetter(descriptor: PropertyGetterDescriptor) {
             keepTrackOfOverridesForPossiblyClashingFakeOverride(descriptor)
+            computeStoredFileSignature(descriptor)
         }
 
         override fun platformSpecificSetter(descriptor: PropertySetterDescriptor) {
             keepTrackOfOverridesForPossiblyClashingFakeOverride(descriptor)
+            computeStoredFileSignature(descriptor)
         }
 
         override fun platformSpecificModule(descriptor: ModuleDescriptor) {
@@ -87,8 +103,26 @@ class JvmIdSignatureDescriptor(private val mangler: KotlinMangler.DescriptorMang
                 val descriptor = it.constructor.declarationDescriptor
                 descriptor is TypeParameterDescriptor && descriptor.containingDeclaration is ClassDescriptor
             }
+
+        private fun computeStoredFileSignature(descriptor: DeclarationDescriptorWithSource) {
+            storedFileSignature = IdSignature.FileSignature(
+                descriptor.source.containingFile,
+                descriptor.containingPackage() ?: FqName.ROOT,
+                descriptor.source.containingFile.name ?: "unknown"
+            )
+        }
+
+        var storedFileSignature: IdSignature.FileSignature? = null
     }
 
     override fun createSignatureBuilder(type: SpecialDeclarationType): DescriptorBasedSignatureBuilder =
-        JvmDescriptorBasedSignatureBuilder(mangler, type)
+        JvmDescriptorBasedSignatureBuilder(type)
+
+    override fun withFileSignature(fileSignature: IdSignature.FileSignature, body: () -> Unit) {
+        externallyGivenFileSignature = fileSignature
+        body()
+        externallyGivenFileSignature = null
+    }
+
+    private var externallyGivenFileSignature: IdSignature.FileSignature? = null
 }
