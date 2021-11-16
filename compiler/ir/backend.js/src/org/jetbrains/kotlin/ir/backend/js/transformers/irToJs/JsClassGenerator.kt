@@ -98,8 +98,7 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
                 else -> {
                     compilationException(
                         "Unexpected declaration in class",
-                        declaration,
-                        context.currentFile
+                        declaration
                     )
                 }
             }
