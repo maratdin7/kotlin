@@ -39,8 +39,7 @@ class JvmIdSignatureDescriptor(mangler: KotlinMangler.DescriptorMangler) : IdSig
         }
 
         override fun platformSpecificClass(descriptor: ClassDescriptor) {
-            // Classes in JVM have unique names and do not need composite signatures (nor is one recoverable from deserialized descriptor).
-            isTopLevelPrivate = false
+            computeStoredFileSignature(descriptor)
         }
 
         override fun platformSpecificProperty(descriptor: PropertyDescriptor) {
