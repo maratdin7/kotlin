@@ -14,6 +14,7 @@ internal class TestExecutable(
 )
 
 internal class TestRun(
+    val displayName: String,
     val executable: TestExecutable,
     val runParameters: List<TestRunParameter>,
     val origin: TestOrigin.SingleTestDataFile
@@ -64,3 +65,8 @@ internal inline fun <reified T : TestRunParameter> List<TestRunParameter>.has():
 internal inline fun <reified T : TestRunParameter> List<TestRunParameter>.get(onFound: T.() -> Unit) {
     firstIsInstanceOrNull<T>()?.let(onFound)
 }
+
+internal class TestRunTreeNode(
+    val testRuns: List<TestRun>,
+    val children: Map<String, TestRunTreeNode>
+)

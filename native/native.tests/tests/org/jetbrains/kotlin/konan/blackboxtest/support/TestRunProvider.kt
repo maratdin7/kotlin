@@ -71,7 +71,16 @@ internal class TestRunProvider(
             )
         }
 
-        return TestRun(executable, runParameters, testCase.origin)
+        return TestRun(
+            displayName = testDataFile.nameWithoutExtension,
+            executable = executable,
+            runParameters = runParameters,
+            origin = testCase.origin
+        )
+    }
+
+    fun getTestRuns(@Suppress("UNUSED_PARAMETER") testDataFile: File): TestRunTreeNode {
+        TODO("not implemented yet")
     }
 
     // Currently, only local test runner is supported.
