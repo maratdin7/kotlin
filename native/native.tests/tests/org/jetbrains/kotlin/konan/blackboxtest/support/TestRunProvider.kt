@@ -3,6 +3,8 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
+@file:Suppress("KDocUnresolvedReference")
+
 package org.jetbrains.kotlin.konan.blackboxtest.support
 
 import com.intellij.openapi.util.Disposer
@@ -24,6 +26,31 @@ internal class TestRunProvider(
     private val compilationFactory = TestCompilationFactory(environment)
     private val cachedCompilations = ThreadSafeCache<TestCompilationCacheKey, TestCompilation>()
 
+    /**
+     * Produces a single [TestRun] per testData file.
+     *
+     * If testData file contains multiple functions annotated with [kotlin.test.Test], then all these functions will be executed
+     * in one shot. If either function will fail, the whole JUnit test will be considered as failed.
+     *
+     * Example:
+     *   //+++ testData file (foo.kt): +++//
+     *   @kotlin.test.Test
+     *   fun one() { /* ... */ }
+     *
+     *   @kotlin.test.Test
+     *   fun two() { /* ... */ }
+     *
+     *   //+++ generated JUnit test suite: +++//
+     *   public class MyTestSuiteGenerated {
+     *       @org.junit.jupiter.api.Test
+     *       @org.jetbrains.kotlin.test.TestMetadata("foo.kt")
+     *       public void testFoo() {
+     *           // Compiles foo.kt with test-runner, probably together with other testData files (bar.kt, qux.kt, ...).
+     *           // Then executes FooKt.one() and FooKt.two() test functions one after another in one shot.
+     *           // If either of test functions fails, the whole "testFoo()" JUnit test is marked as failed.
+     *       }
+     *   }
+     */
     fun getSingleTestRun(testDataFile: File): TestRun {
         environment.assertNotDisposed()
 
@@ -79,6 +106,36 @@ internal class TestRunProvider(
         )
     }
 
+    /**
+     * Produces at least one [TestRun] per testData file.
+     *
+     * If testData file contains multiple functions annotated with [kotlin.test.Test], then a separate [TestRun] will be produced
+     * for each such function.
+     *
+     * This allows to have a better granularity in tests. So that every individual test method inside testData file will be considered
+     * as an individual JUnit test, and will be presented as a separate row in JUnit test report.
+     *
+     * Example:
+     *   //+++ testData file (foo.kt): +++//
+     *   @kotlin.test.Test
+     *   fun one() { /* ... */ }
+     *
+     *   @kotlin.test.Test
+     *   fun two() { /* ... */ }
+     *
+     *   //+++ generated JUnit test suite: +++//
+     *   public class MyTestSuiteGenerated {
+     *       @org.junit.jupiter.api.TestFactory
+     *       @org.jetbrains.kotlin.test.TestMetadata("foo.kt")
+     *       public Collection<org.junit.jupiter.api.DynamicNode> testFoo() {
+     *           // Compiles foo.kt with test-runner, probably together with other testData files (bar.kt, qux.kt, ...).
+     *           // Then produces two instances of DynamicTest for FooKt.one() and FooKt.two() functions.
+     *           // Each DynamicTest is executed as a separate JUnit test.
+     *           // So if FooKt.one() fails and FooKt.two() succeeds, then "testFoo.one" JUnit test will be presented as failed
+     *           // in the test report, and "testFoo.two" will be presented as passed.
+     *       }
+     *   }
+     */
     fun getTestRuns(@Suppress("UNUSED_PARAMETER") testDataFile: File): TestRunTreeNode {
         TODO("not implemented yet")
     }
