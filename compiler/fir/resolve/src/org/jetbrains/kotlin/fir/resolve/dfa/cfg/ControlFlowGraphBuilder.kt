@@ -457,15 +457,29 @@ class ControlFlowGraphBuilder {
         val graph = exitClass(anonymousObject).also {
             currentGraph.addSubGraph(it)
         }
-        val node = createAnonymousObjectExitNode(anonymousObject).also {
-            // TODO: looks like there was some problem with enum initializers
-            if (lastNodes.isNotEmpty) {
-                addNewSimpleNode(it)
-            }
+        val enterNode = createAnonymousObjectEnterNode(anonymousObject)
+        val exitNode = createAnonymousObjectExitNode(anonymousObject)
+        val previous = lastNodes.popOrNull() // TODO: looks like there was some problem with enum initializers
+        // TODO: Intentionally not using anonymous object init blocks for data flow? Might've been a FE1.0 bug.
+        previous?.let { addEdge(it, enterNode, preferredKind = EdgeKind.CfgForward) }
+        previous?.let { addEdge(it, exitNode, preferredKind = EdgeKind.DfgForward) }
+        addEdge(enterNode, graph.enterNode, preferredKind = EdgeKind.CfgForward)
+        if (!graph.exitNode.isDead) {
+            addEdge(graph.exitNode, exitNode, preferredKind = EdgeKind.CfgForward)
         }
-        visitLocalClassFunctions(anonymousObject, node)
-        addEdge(node, graph.enterNode, preferredKind = EdgeKind.CfgForward)
-        return node to graph
+        // TODO: there are DFG edges from `previous` to class members generated somewhere;
+        //   would be neater if they were merged with the CFG edges this function call generates.
+        // TODO: Here we're assuming that the methods are called after the object is constructed, which is really not true
+        //   (init blocks can call them). But FE1.0 did so too, hence the following code compiles and prints 0:
+        //     val x: Int
+        //     object {
+        //         fun bar() = x
+        //         init { x = bar() }
+        //     }
+        //     println(x)
+        visitLocalClassFunctions(anonymousObject, exitNode)
+        lastNodes.push(exitNode)
+        return exitNode to graph
     }
 
     fun exitAnonymousObjectExpression(anonymousObjectExpression: FirAnonymousObjectExpression): AnonymousObjectExpressionExitNode {

@@ -45,21 +45,24 @@ digraph innerClassInAnonymousObject_kt {
     subgraph cluster_5 {
         color=red
         14 [label="Enter property" style="filled" fillcolor=red];
+        18 [label="Enter anonymous object"];
+        subgraph cluster_6 {
+            color=blue
+            12 [label="Enter class <anonymous object>" style="filled" fillcolor=red];
+            13 [label="Exit class <anonymous object>" style="filled" fillcolor=red];
+        }
         15 [label="Exit anonymous object"];
         16 [label="Exit anonymous object expression"];
         17 [label="Exit property" style="filled" fillcolor=red];
     }
-    subgraph cluster_6 {
-        color=blue
-        12 [label="Enter class <anonymous object>" style="filled" fillcolor=red];
-        13 [label="Exit class <anonymous object>" style="filled" fillcolor=red];
-    }
-    14 -> {15};
-    14 -> {0 3 6} [color=red];
+    14 -> {0 3 6 15} [color=red];
+    14 -> {18} [color=green];
     15 -> {16};
-    15 -> {0 12} [color=green];
+    15 -> {0} [color=green];
     15 -> {0 12} [style=dashed];
     16 -> {17};
+    18 -> {12} [color=green];
     12 -> {13} [color=green];
+    13 -> {15} [color=green];
 
 }
