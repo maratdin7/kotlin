@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.konan.blackboxtest.support
 
+import org.jetbrains.kotlin.test.services.JUnit5Assertions.assertTrue
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import java.io.File
 
@@ -24,25 +25,46 @@ internal sealed interface TestRunParameter {
     fun applyTo(programArgs: MutableList<String>)
 
     sealed class WithFilter : TestRunParameter {
-        protected abstract val wildcard: String
         abstract fun testMatches(testName: String): Boolean
+    }
 
-        final override fun applyTo(programArgs: MutableList<String>) {
-            programArgs += "--ktest_filter=$wildcard"
+    class WithPackageFilter(packageFQN: PackageFQN) : WithFilter() {
+        init {
+            assertTrue(packageFQN.isNotEmpty())
+        }
+
+        private val packagePrefix = "$packageFQN."
+
+        override fun applyTo(programArgs: MutableList<String>) {
+            programArgs += "--ktest_filter=$packagePrefix*"
+        }
+
+        override fun testMatches(testName: String) = testName.startsWith(packagePrefix)
+    }
+
+    class WithFunctionFilter(packageFQN: PackageFQN, val functionName: FunctionName) : WithFilter() {
+        private val packagePrefix = if (packageFQN.isNotEmpty()) "$packageFQN." else ""
+
+        override fun applyTo(programArgs: MutableList<String>) {
+            programArgs += "--ktest_regex_filter=${packagePrefix.replace(".", "\\.")}([^\\.]+)\\.$functionName"
+        }
+
+        override fun testMatches(testName: String): Boolean {
+            val remainder = if (packagePrefix.isNotEmpty()) {
+                if (!testName.startsWith(packagePrefix)) return false
+                testName.substringAfter(packagePrefix)
+            } else
+                testName
+
+            val suffix = remainder
+                .split('.')
+                .takeIf { it.size == 2 }
+                ?.last()
+                ?: return false
+
+            return suffix == functionName
         }
     }
-
-    class WithPackageFilter(private val packageFQN: PackageFQN) : WithFilter() {
-        override val wildcard get() = "$packageFQN.*"
-        override fun testMatches(testName: String) = testName.startsWith("$packageFQN.")
-    }
-
-/*
-    class WithFunctionFilter(private val functionFQN: String) : WithFilter() {
-        override val wildcard get() = functionFQN
-        override fun testMatches(testName: String) = testName == functionFQN
-    }
-*/
 
     object WithGTestLogger : TestRunParameter {
         override fun applyTo(programArgs: MutableList<String>) {

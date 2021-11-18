@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.test.services.JUnit5Assertions.fail
 import java.io.File
 
 internal typealias PackageFQN = String
+internal typealias FunctionName = String
 
 /**
  * Helps to track the origin of every [TestCase], [TestCompilation] or [TestExecutable]. Used for issue reporting purposes.
