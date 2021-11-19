@@ -45,8 +45,8 @@ abstract class AbstractNativeBlackBoxTest {
             dynamicTest(testRun.displayName) { runTest(testRun) }
         }
 
-        testRunNode.children.mapTo(this) { (packageName, childTestRunNode) ->
-            dynamicContainer(packageName, buildJUnitDynamicNodes(childTestRunNode))
+        testRunNode.children.mapTo(this) { childTestRunNode ->
+            dynamicContainer(childTestRunNode.packageSegment, buildJUnitDynamicNodes(childTestRunNode))
         }
     }
 

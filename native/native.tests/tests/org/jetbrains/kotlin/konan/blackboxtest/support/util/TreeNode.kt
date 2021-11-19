@@ -8,15 +8,17 @@ package org.jetbrains.kotlin.konan.blackboxtest.support.util
 import org.jetbrains.kotlin.konan.blackboxtest.support.PackageFQN
 
 internal interface TreeNode<T> {
-    val items: List<T>
-    val children: Map<PackageFQN, TreeNode<T>>
+    val packageSegment: String
+    val items: Collection<T>
+    val children: Collection<TreeNode<T>>
 
     companion object {
         fun <T> oneLevel(vararg items: T) = oneLevel(listOf(*items))
 
         fun <T> oneLevel(items: Iterable<T>) = object : TreeNode<T> {
+            override val packageSegment get() = ""
             override val items = items.toList()
-            override val children get() = emptyMap<PackageFQN, TreeNode<T>>()
+            override val children get() = emptyList<TreeNode<T>>()
         }
     }
 }
@@ -31,43 +33,40 @@ internal fun <T, R> Collection<T>.buildTree(extractPackageName: (T) -> PackageFQ
     }
 
     // Long pass.
-    val root = TreeBuilder<R>()
+    val root = TreeBuilder<R>("")
 
     // Populate the tree.
     groupedItems.forEach { (packageFQN, items) ->
         var node = root
-        packageFQN.split('.').forEach { packageName ->
-            node = node.children.computeIfAbsent(packageName) { TreeBuilder() }
+        packageFQN.split('.').forEach { packageSegment ->
+            node = node.childrenMap.computeIfAbsent(packageSegment) { TreeBuilder(packageSegment) }
         }
         node.items += items
     }
 
     // Compress the tree.
-    return root.skipMeaninglessNodes().apply { compress() }
+    root.compress()
+
+    return root
 }
 
-private class TreeBuilder<T> : TreeNode<T> {
+private class TreeBuilder<T>(override var packageSegment: String) : TreeNode<T> {
     override val items = mutableListOf<T>()
-    override val children = hashMapOf<PackageFQN, TreeBuilder<T>>()
+    val childrenMap = hashMapOf<String, TreeBuilder<T>>()
+    override val children: Collection<TreeBuilder<T>> get() = childrenMap.values
 }
-
-private tailrec fun <T> TreeBuilder<T>.skipMeaninglessNodes(): TreeBuilder<T> =
-    if (items.isNotEmpty() || children.size != 1)
-        this
-    else
-        children.values.first().skipMeaninglessNodes()
 
 private fun <T> TreeBuilder<T>.compress() {
-    while (items.isEmpty() && children.size == 1) {
-        val (childPackageName, childNode) = children.entries.first()
+    while (items.isEmpty() && childrenMap.size == 1) {
+        val childNode = childrenMap.values.first()
 
         items += childNode.items
 
-        children.clear()
-        childNode.children.forEach { (grandChildPackageName, grandChildNode) ->
-            children[joinPackageNames(childPackageName, grandChildPackageName)] = grandChildNode
-        }
+        childrenMap.clear()
+        childrenMap += childNode.childrenMap
+
+        packageSegment = joinPackageNames(packageSegment, childNode.packageSegment)
     }
 
-    children.values.forEach { it.compress() }
+    childrenMap.values.forEach { it.compress() }
 }
