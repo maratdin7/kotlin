@@ -6,10 +6,8 @@
 package org.jetbrains.kotlin.konan.blackboxtest
 
 import com.intellij.testFramework.TestDataFile
-import org.jetbrains.kotlin.konan.blackboxtest.support.NativeBlackBoxTestSupport
-import org.jetbrains.kotlin.konan.blackboxtest.support.TestRun
-import org.jetbrains.kotlin.konan.blackboxtest.support.TestRunProvider
-import org.jetbrains.kotlin.konan.blackboxtest.support.TestRunTreeNode
+import org.jetbrains.kotlin.konan.blackboxtest.support.*
+import org.jetbrains.kotlin.konan.blackboxtest.support.util.TreeNode
 import org.jetbrains.kotlin.konan.blackboxtest.support.util.getAbsoluteFile
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicNode
@@ -42,13 +40,13 @@ abstract class AbstractNativeBlackBoxTest {
         return buildJUnitDynamicNodes(rootTestRunNode)
     }
 
-    private fun buildJUnitDynamicNodes(testRunNode: TestRunTreeNode): Collection<DynamicNode> = buildList {
-        testRunNode.testRuns.mapTo(this) { testRun ->
+    private fun buildJUnitDynamicNodes(testRunNode: TreeNode<TestRun>): Collection<DynamicNode> = buildList {
+        testRunNode.items.mapTo(this) { testRun ->
             dynamicTest(testRun.displayName) { runTest(testRun) }
         }
 
-        testRunNode.children.mapTo(this) { (prefix, childTestRunNode) ->
-            dynamicContainer(prefix, buildJUnitDynamicNodes(childTestRunNode))
+        testRunNode.children.mapTo(this) { (packageName, childTestRunNode) ->
+            dynamicContainer(packageName, buildJUnitDynamicNodes(childTestRunNode))
         }
     }
 

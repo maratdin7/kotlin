@@ -15,6 +15,8 @@ import org.jetbrains.kotlin.konan.blackboxtest.support.group.TestCaseGroupProvid
 import org.jetbrains.kotlin.konan.blackboxtest.support.runner.AbstractRunner
 import org.jetbrains.kotlin.konan.blackboxtest.support.runner.LocalTestRunner
 import org.jetbrains.kotlin.konan.blackboxtest.support.util.ThreadSafeCache
+import org.jetbrains.kotlin.konan.blackboxtest.support.util.TreeNode
+import org.jetbrains.kotlin.konan.blackboxtest.support.util.buildTree
 import org.jetbrains.kotlin.test.services.JUnit5Assertions.assertTrue
 import org.jetbrains.kotlin.test.services.JUnit5Assertions.fail
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -88,7 +90,7 @@ internal class TestRunProvider(
      *       }
      *   }
      */
-    fun getTestRuns(testDataFile: File): TestRunTreeNode = withTestExecutable(testDataFile) { testCase, executable ->
+    fun getTestRuns(testDataFile: File): TreeNode<TestRun> = withTestExecutable(testDataFile) { testCase, executable ->
         fun createTestRun(testRunName: String, testFunction: TestFunction?): TestRun {
             val runParameters = getRunParameters(testCase, testFunction)
             return TestRun(testRunName, executable, runParameters, testCase.origin)
@@ -98,11 +100,11 @@ internal class TestRunProvider(
             TestKind.STANDALONE_NO_TR -> {
                 val testRunName = testCase.extras<NoTestRunnerExtras>().entryPoint.substringAfterLast('.')
                 val testRun = createTestRun(testRunName, testFunction = null)
-                TestRunTreeNode.singleton(testRun)
+                TreeNode.oneLevel(testRun)
             }
             TestKind.REGULAR, TestKind.STANDALONE -> {
                 val testFunctions = testCase.extras<WithTestRunnerExtras>().testFunctions
-                testFunctions.buildTestRunTree { testFunction -> createTestRun(testFunction.functionName, testFunction) }
+                testFunctions.buildTree(TestFunction::packageFQN) { testFunction -> createTestRun(testFunction.functionName, testFunction) }
             }
         }
     }
