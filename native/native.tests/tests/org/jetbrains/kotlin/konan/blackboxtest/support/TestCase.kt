@@ -157,9 +157,9 @@ internal class TestCase(
     val origin: TestOrigin.SingleTestDataFile,
     val nominalPackageName: PackageFQN,
     val expectedOutputDataFile: File?,
-    val extras: StandaloneNoTestRunnerExtras? = null
+    val extras: NoTestRunnerExtras? = null
 ) {
-    class StandaloneNoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?)
+    class NoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?)
 
     init {
         assertEquals(extras != null, kind == TestKind.STANDALONE_NO_TR)

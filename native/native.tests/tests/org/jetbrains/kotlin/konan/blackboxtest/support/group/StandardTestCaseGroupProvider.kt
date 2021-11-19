@@ -190,7 +190,7 @@ internal class StandardTestCaseGroupProvider(private val environment: TestEnviro
             nominalPackageName = nominalPackageName,
             expectedOutputDataFile = expectedOutputDataFile,
             extras = if (testKind == TestKind.STANDALONE_NO_TR) {
-                TestCase.StandaloneNoTestRunnerExtras(
+                TestCase.NoTestRunnerExtras(
                     entryPoint = parseEntryPoint(registeredDirectives, location),
                     inputDataFile = parseInputDataFile(baseDir = testDataFile.parentFile, registeredDirectives, location)
                 )
