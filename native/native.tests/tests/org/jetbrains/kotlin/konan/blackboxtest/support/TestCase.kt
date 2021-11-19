@@ -44,11 +44,18 @@ internal class TestFile<M : TestModule> private constructor(
         class Uncommitted(var text: String) : State
     }
 
-    fun update(transformation: (String) -> String) {
-        when (val state = state) {
-            is State.Uncommitted -> state.text = transformation(state.text)
+    private val uncommittedState: State.Uncommitted
+        get() = when (val state = state) {
+            is State.Uncommitted -> state
             is State.Committed -> fail { "File $location is already committed." }
         }
+
+    val text: String
+        get() = uncommittedState.text
+
+    fun update(transformation: (String) -> String) {
+        val uncommittedState = uncommittedState
+        uncommittedState.text = transformation(uncommittedState.text)
     }
 
     // An optimization to release the memory occupied by numerous file texts.
