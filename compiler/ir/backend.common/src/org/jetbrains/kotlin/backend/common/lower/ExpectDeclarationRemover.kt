@@ -5,23 +5,22 @@
 
 package org.jetbrains.kotlin.backend.common.lower
 
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
-import org.jetbrains.kotlin.descriptors.MemberDescriptor
+import org.jetbrains.kotlin.backend.common.BackendContext
+import org.jetbrains.kotlin.backend.common.FileLoweringPass
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrGetValue
+import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
 import org.jetbrains.kotlin.ir.symbols.IrValueSymbol
 import org.jetbrains.kotlin.ir.types.extractTypeParameters
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
-import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.multiplatform.ExpectedActualResolver
 import org.jetbrains.kotlin.resolve.multiplatform.OptionalAnnotationUtil
@@ -29,23 +28,87 @@ import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 // `doRemove` means should expect-declaration be removed from IR
 @OptIn(ObsoleteDescriptorBasedAPI::class)
-class ExpectDeclarationRemover(val symbolTable: ReferenceSymbolTable, private val doRemove: Boolean) : IrElementVisitorVoid {
+class ExpectDeclarationRemover(val symbolTable: ReferenceSymbolTable, private val doRemove: Boolean)
+    : IrElementTransformerVoid(), FileLoweringPass {
+
+    constructor(context: BackendContext) : this(context.ir.symbols.externalSymbolTable, true)
+
     private val typeParameterSubstitutionMap = mutableMapOf<Pair<IrFunction, IrFunction>, Map<IrTypeParameter, IrTypeParameter>>()
 
-    override fun visitElement(element: IrElement) {
-        element.acceptChildrenVoid(this)
+    override fun lower(irFile: IrFile) {
+        visitFile(irFile)
     }
 
-    override fun visitFile(declaration: IrFile) {
-        super.visitFile(declaration)
+    override fun visitElement(element: IrElement): IrElement {
+        element.transformChildrenVoid()
+        return element
+    }
+
+    override fun visitFile(declaration: IrFile): IrFile {
         declaration.declarations.removeAll {
             shouldRemoveTopLevelDeclaration(it)
         }
+        return super.visitFile(declaration)
     }
 
-    override fun visitValueParameter(declaration: IrValueParameter) {
-        super.visitValueParameter(declaration)
+    override fun visitValueParameter(declaration: IrValueParameter): IrStatement {
         tryCopyDefaultArguments(declaration)
+        return super.visitValueParameter(declaration)
+    }
+
+    override fun visitCall(expression: IrCall): IrExpression {
+        val nExpression = super.visitCall(expression) as IrCall
+        return if (nExpression.symbol.owner.isExpect) {
+            irCall(
+                nExpression,
+                symbolTable.referenceSimpleFunction(
+                    nExpression.symbol.descriptor.findActualForExpect() as? FunctionDescriptor ?: return nExpression
+                )
+            )
+        } else nExpression
+    }
+
+    override fun visitPropertyReference(expression: IrPropertyReference): IrExpression {
+        val nExpression = super.visitPropertyReference(expression) as IrPropertyReference
+        return if (nExpression.symbol.owner.isExpect) {
+            val symbol = symbolTable.referenceProperty(
+                nExpression.symbol.descriptor.findActualForExpect() as? PropertyDescriptor ?: return nExpression
+            )
+            val getter = symbol.descriptor.getter?.let { symbolTable.referenceSimpleFunction(it) }
+            val setter = symbol.descriptor.setter?.let { symbolTable.referenceSimpleFunction(it) }
+            IrPropertyReferenceImpl(
+                nExpression.startOffset, nExpression.endOffset, nExpression.type,
+                symbol, nExpression.typeArgumentsCount,
+                nExpression.field, getter, setter,
+                nExpression.origin
+            ).apply {
+                type = nExpression.type
+                attributeOwnerId = nExpression.attributeOwnerId
+                copyTypeArgumentsFrom(nExpression)
+                dispatchReceiver = nExpression.dispatchReceiver
+                extensionReceiver = nExpression.extensionReceiver
+            }
+        } else nExpression
+    }
+
+    override fun visitFunctionReference(expression: IrFunctionReference): IrExpression {
+        val nExpression = super.visitFunctionReference(expression) as IrFunctionReference
+        return if (nExpression.symbol.owner.isExpect) {
+            IrFunctionReferenceImpl(
+                nExpression.startOffset, nExpression.endOffset, nExpression.type,
+                symbolTable.referenceSimpleFunction(
+                    nExpression.symbol.descriptor.forceFindActualForExpect() as? FunctionDescriptor ?: return nExpression
+                ),
+                nExpression.typeArgumentsCount, nExpression.valueArgumentsCount,
+                nExpression.reflectionTarget, nExpression.origin
+            ).apply {
+                type = nExpression.type
+                attributeOwnerId = nExpression.attributeOwnerId
+                copyTypeArgumentsFrom(nExpression)
+                dispatchReceiver = nExpression.dispatchReceiver
+                extensionReceiver = nExpression.extensionReceiver
+            }
+        } else nExpression
     }
 
     fun transformFlat(declaration: IrDeclaration): List<IrDeclaration>? {
@@ -139,6 +202,9 @@ class ExpectDeclarationRemover(val symbolTable: ReferenceSymbolTable, private va
             findCompatibleActualForExpected(this@findActualForExpect.module).singleOrNull()
         }
     }
+
+    private fun MemberDescriptor.forceFindActualForExpect(): MemberDescriptor =
+        findActualForExpect() ?: error("no actual for $this")
 
     private fun MemberDescriptor.findExpectForActual(): MemberDescriptor? {
         if (!isActual) error(this)
