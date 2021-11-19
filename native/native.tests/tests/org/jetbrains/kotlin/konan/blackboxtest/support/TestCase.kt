@@ -159,6 +159,12 @@ internal class TestCase(
     val expectedOutputDataFile: File?,
     val extras: StandaloneNoTestRunnerExtras? = null
 ) {
+    class StandaloneNoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?)
+
+    init {
+        assertEquals(extras != null, kind == TestKind.STANDALONE_NO_TR)
+    }
+
     // The set of module that have no incoming dependency arcs.
     val rootModules: Set<TestModule.Exclusive> by lazy {
         val allModules = hashSetOf<TestModule>()
@@ -181,12 +187,6 @@ internal class TestCase(
 
         @Suppress("UNCHECKED_CAST")
         rootModules as Set<TestModule.Exclusive>
-    }
-
-    class StandaloneNoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?)
-
-    init {
-        assertEquals(extras != null, kind == TestKind.STANDALONE_NO_TR)
     }
 
     fun initialize(findSharedModule: ((moduleName: String) -> TestModule.Shared?)?) {
