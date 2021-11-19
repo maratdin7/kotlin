@@ -52,45 +52,9 @@ internal class TestRunProvider(
      *       }
      *   }
      */
-    fun getSingleTestRun(testDataFile: File): TestRun {
-        environment.assertNotDisposed()
-
-        val testDataDir = testDataFile.parentFile
-        val testDataFileName = testDataFile.name
-
-        val testCaseGroup = testCaseGroupProvider.getTestCaseGroup(testDataDir) ?: fail { "No test case for $testDataFile" }
-        assumeTrue(testCaseGroup.isEnabled(testDataFileName), "Test case is disabled")
-
-        val testCase = testCaseGroup.getByName(testDataFileName) ?: fail { "No test case for $testDataFile" }
-
-        val testCompilation = when (testCase.kind) {
-            TestKind.STANDALONE, TestKind.STANDALONE_NO_TR -> {
-                // Create a separate compilation for each standalone test case.
-                cachedCompilations.computeIfAbsent(TestCompilationCacheKey.Standalone(testDataFile)) {
-                    compilationFactory.testCasesToExecutable(listOf(testCase))
-                }
-            }
-            TestKind.REGULAR -> {
-                // Group regular test cases by compiler arguments.
-                cachedCompilations.computeIfAbsent(TestCompilationCacheKey.Grouped(testDataDir, testCase.freeCompilerArgs)) {
-                    val testCases = testCaseGroup.getRegularOnlyByCompilerArgs(testCase.freeCompilerArgs)
-                    assertTrue(testCases.isNotEmpty())
-                    compilationFactory.testCasesToExecutable(testCases)
-                }
-            }
-        }
-
-        val (executableFile, loggedCompilerCall) = testCompilation.result.assertSuccess() // <-- Compilation happens here.
-        val executable = TestExecutable(executableFile, loggedCompilerCall)
-
+    fun getSingleTestRun(testDataFile: File): TestRun = withTestExecutable(testDataFile) { testCase, executable ->
         val runParameters = getRunParameters(testCase, testFunction = null)
-
-        return TestRun(
-            displayName = testDataFile.nameWithoutExtension,
-            executable = executable,
-            runParameters = runParameters,
-            origin = testCase.origin
-        )
+        TestRun(displayName = testDataFile.nameWithoutExtension, executable, runParameters, testCase.origin)
     }
 
     /**
@@ -125,6 +89,42 @@ internal class TestRunProvider(
      */
     fun getTestRuns(@Suppress("UNUSED_PARAMETER") testDataFile: File): TestRunTreeNode {
         TODO("not implemented yet")
+    }
+
+    private fun <T> withTestExecutable(testDataFile: File, action: (TestCase, TestExecutable) -> T): T {
+        environment.assertNotDisposed()
+
+        val testDataDir = testDataFile.parentFile
+        val testDataFileName = testDataFile.name
+
+        val testCaseGroup = testCaseGroupProvider.getTestCaseGroup(testDataDir) ?: fail { "No test case for $testDataFile" }
+        assumeTrue(testCaseGroup.isEnabled(testDataFileName), "Test case is disabled")
+
+        val testCase = testCaseGroup.getByName(testDataFileName) ?: fail { "No test case for $testDataFile" }
+
+        val testCompilation = when (testCase.kind) {
+            TestKind.STANDALONE, TestKind.STANDALONE_NO_TR -> {
+                // Create a separate compilation for each standalone test case.
+                val cacheKey = TestCompilationCacheKey.Standalone(testDataFile)
+                cachedCompilations.computeIfAbsent(cacheKey) {
+                    compilationFactory.testCasesToExecutable(listOf(testCase))
+                }
+            }
+            TestKind.REGULAR -> {
+                // Group regular test cases by compiler arguments.
+                val cacheKey = TestCompilationCacheKey.Grouped(testDataDir, testCase.freeCompilerArgs)
+                cachedCompilations.computeIfAbsent(cacheKey) {
+                    val testCases = testCaseGroup.getRegularOnlyByCompilerArgs(testCase.freeCompilerArgs)
+                    assertTrue(testCases.isNotEmpty())
+                    compilationFactory.testCasesToExecutable(testCases)
+                }
+            }
+        }
+
+        val (executableFile, loggedCompilerCall) = testCompilation.result.assertSuccess() // <-- Compilation happens here.
+        val executable = TestExecutable(executableFile, loggedCompilerCall)
+
+        return action(testCase, executable)
     }
 
     private fun getRunParameters(testCase: TestCase, testFunction: TestFunction?): List<TestRunParameter> = with(testCase) {
