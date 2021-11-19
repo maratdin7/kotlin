@@ -578,7 +578,7 @@ private class ExtTestDataFile(
             origin = TestOrigin.SingleTestDataFile(testDataFile),
             nominalPackageName = settings.nominalPackageName,
             expectedOutputDataFile = null,
-            extras = WithTestRunnerExtras
+            extras = WithTestRunnerExtras.EMPTY
         )
         testCase.initialize(sharedModules::get)
 

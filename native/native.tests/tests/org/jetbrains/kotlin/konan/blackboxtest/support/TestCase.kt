@@ -3,6 +3,8 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
+@file:Suppress("KDocUnresolvedReference")
+
 package org.jetbrains.kotlin.konan.blackboxtest.support
 
 import org.jetbrains.kotlin.konan.blackboxtest.support.TestModule.Companion.allDependencies
@@ -23,6 +25,11 @@ internal interface TestOrigin {
         override fun toString(): String = testDataFile.path
     }
 }
+
+/**
+ * Represents a single test function (i.e. a function annotated with [kotlin.test.Test]) inside of a [TestFile].
+ */
+internal data class TestFunction(val packageFQN: PackageFQN, val functionName: FunctionName)
 
 /**
  * Represents a single file that will be supplied to the compiler.
@@ -160,7 +167,11 @@ internal class TestCase(
 ) {
     sealed interface Extras
     class NoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?) : Extras
-    object WithTestRunnerExtras : Extras
+    class WithTestRunnerExtras(val testFunctions: Collection<TestFunction>) : Extras {
+        companion object {
+            val EMPTY = WithTestRunnerExtras(emptyList())
+        }
+    }
 
     init {
         when (kind) {

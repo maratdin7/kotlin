@@ -197,7 +197,7 @@ internal class StandardTestCaseGroupProvider(private val environment: TestEnviro
                     inputDataFile = parseInputDataFile(baseDir = testDataFile.parentFile, registeredDirectives, location)
                 )
             } else
-                WithTestRunnerExtras
+                WithTestRunnerExtras.EMPTY // TODO: collect test functions
         )
         testCase.initialize(findSharedModule = null)
 

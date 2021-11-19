@@ -42,11 +42,11 @@ internal sealed interface TestRunParameter {
         override fun testMatches(testName: String) = testName.startsWith(packagePrefix)
     }
 
-    class WithFunctionFilter(packageFQN: PackageFQN, val functionName: FunctionName) : WithFilter() {
-        private val packagePrefix = if (packageFQN.isNotEmpty()) "$packageFQN." else ""
+    class WithFunctionFilter(val testFunction: TestFunction) : WithFilter() {
+        private val packagePrefix = if (testFunction.packageFQN.isNotEmpty()) "${testFunction.packageFQN}." else ""
 
         override fun applyTo(programArgs: MutableList<String>) {
-            programArgs += "--ktest_regex_filter=${packagePrefix.replace(".", "\\.")}([^\\.]+)\\.$functionName"
+            programArgs += "--ktest_regex_filter=${packagePrefix.replace(".", "\\.")}([^\\.]+)\\.${testFunction.functionName}"
         }
 
         override fun testMatches(testName: String): Boolean {
@@ -62,7 +62,7 @@ internal sealed interface TestRunParameter {
                 ?.last()
                 ?: return false
 
-            return suffix == functionName
+            return suffix == testFunction.functionName
         }
     }
 
