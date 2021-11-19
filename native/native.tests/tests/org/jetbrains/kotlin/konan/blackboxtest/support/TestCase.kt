@@ -172,7 +172,7 @@ internal class TestCase(
     inline fun <reified T : Extras> extras(): T = extras as T
     inline fun <reified T : Extras> safeExtras(): T? = extras as? T
 
-    // The set of module that have no incoming dependency arcs.
+    // The set of modules that have no incoming dependency arcs.
     val rootModules: Set<TestModule.Exclusive> by lazy {
         val allModules = hashSetOf<TestModule>()
         modules.forEach { module ->
