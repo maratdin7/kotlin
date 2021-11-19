@@ -87,8 +87,3 @@ internal inline fun <reified T : TestRunParameter> List<TestRunParameter>.has():
 internal inline fun <reified T : TestRunParameter> List<TestRunParameter>.get(onFound: T.() -> Unit) {
     firstIsInstanceOrNull<T>()?.let(onFound)
 }
-
-internal class TestRunTreeNode(
-    val testRuns: List<TestRun>,
-    val children: Map<String, TestRunTreeNode>
-)

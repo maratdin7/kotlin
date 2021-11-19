@@ -9,6 +9,7 @@ package org.jetbrains.kotlin.konan.blackboxtest.support
 
 import com.intellij.openapi.util.Disposer
 import org.jetbrains.kotlin.konan.blackboxtest.support.TestCase.NoTestRunnerExtras
+import org.jetbrains.kotlin.konan.blackboxtest.support.TestCase.WithTestRunnerExtras
 import org.jetbrains.kotlin.konan.blackboxtest.support.TestCompilationResult.Companion.assertSuccess
 import org.jetbrains.kotlin.konan.blackboxtest.support.group.TestCaseGroupProvider
 import org.jetbrains.kotlin.konan.blackboxtest.support.runner.AbstractRunner
@@ -87,8 +88,23 @@ internal class TestRunProvider(
      *       }
      *   }
      */
-    fun getTestRuns(@Suppress("UNUSED_PARAMETER") testDataFile: File): TestRunTreeNode {
-        TODO("not implemented yet")
+    fun getTestRuns(testDataFile: File): TestRunTreeNode = withTestExecutable(testDataFile) { testCase, executable ->
+        fun createTestRun(testRunName: String, testFunction: TestFunction?): TestRun {
+            val runParameters = getRunParameters(testCase, testFunction)
+            return TestRun(testRunName, executable, runParameters, testCase.origin)
+        }
+
+        when (testCase.kind) {
+            TestKind.STANDALONE_NO_TR -> {
+                val testRunName = testCase.extras<NoTestRunnerExtras>().entryPoint.substringAfterLast('.')
+                val testRun = createTestRun(testRunName, testFunction = null)
+                TestRunTreeNode.singleton(testRun)
+            }
+            TestKind.REGULAR, TestKind.STANDALONE -> {
+                val testFunctions = testCase.extras<WithTestRunnerExtras>().testFunctions
+                testFunctions.buildTestRunTree { testFunction -> createTestRun(testFunction.functionName, testFunction) }
+            }
+        }
     }
 
     private fun <T> withTestExecutable(testDataFile: File, action: (TestCase, TestExecutable) -> T): T {
