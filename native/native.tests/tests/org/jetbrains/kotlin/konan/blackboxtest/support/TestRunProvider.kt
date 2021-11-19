@@ -104,7 +104,7 @@ internal class TestRunProvider(
             }
             TestKind.REGULAR, TestKind.STANDALONE -> {
                 val testFunctions = testCase.extras<WithTestRunnerExtras>().testFunctions
-                testFunctions.buildTree(TestFunction::packageFQN) { testFunction -> createTestRun(testFunction.functionName, testFunction) }
+                testFunctions.buildTree(TestFunction::packageName) { testFunction -> createTestRun(testFunction.functionName, testFunction) }
             }
         }
     }

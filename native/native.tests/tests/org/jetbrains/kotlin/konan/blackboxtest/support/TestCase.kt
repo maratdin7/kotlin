@@ -29,7 +29,7 @@ internal interface TestOrigin {
 /**
  * Represents a single test function (i.e. a function annotated with [kotlin.test.Test]) inside of a [TestFile].
  */
-internal data class TestFunction(val packageFQN: PackageFQN, val functionName: FunctionName)
+internal data class TestFunction(val packageName: PackageFQN, val functionName: FunctionName)
 
 /**
  * Represents a single file that will be supplied to the compiler.

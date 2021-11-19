@@ -21,8 +21,8 @@ internal interface TreeNode<T> {
     }
 }
 
-internal fun <T, R> Collection<T>.buildTree(extractPackageFQN: (T) -> PackageFQN, transform: (T) -> R): TreeNode<R> {
-    val groupedItems: Map<PackageFQN, List<R>> = groupBy(extractPackageFQN).mapValues { (_, items) -> items.map(transform) }
+internal fun <T, R> Collection<T>.buildTree(extractPackageName: (T) -> PackageFQN, transform: (T) -> R): TreeNode<R> {
+    val groupedItems: Map<PackageFQN, List<R>> = groupBy(extractPackageName).mapValues { (_, items) -> items.map(transform) }
 
     // Fast pass.
     when (groupedItems.size) {
