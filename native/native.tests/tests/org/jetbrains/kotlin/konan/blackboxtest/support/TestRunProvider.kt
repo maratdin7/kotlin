@@ -83,21 +83,7 @@ internal class TestRunProvider(
         val (executableFile, loggedCompilerCall) = testCompilation.result.assertSuccess() // <-- Compilation happens here.
         val executable = TestExecutable(executableFile, loggedCompilerCall)
 
-        val runParameters = when (testCase.kind) {
-            TestKind.STANDALONE_NO_TR -> listOfNotNull(
-                testCase.extras<NoTestRunnerExtras>().inputDataFile?.let(TestRunParameter::WithInputData),
-                testCase.expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
-            )
-            TestKind.STANDALONE -> listOfNotNull(
-                TestRunParameter.WithGTestLogger,
-                testCase.expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
-            )
-            TestKind.REGULAR -> listOfNotNull(
-                TestRunParameter.WithGTestLogger,
-                TestRunParameter.WithPackageFilter(testCase.nominalPackageName),
-                testCase.expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
-            )
-        }
+        val runParameters = getRunParameters(testCase, testFunction = null)
 
         return TestRun(
             displayName = testDataFile.nameWithoutExtension,
@@ -139,6 +125,29 @@ internal class TestRunProvider(
      */
     fun getTestRuns(@Suppress("UNUSED_PARAMETER") testDataFile: File): TestRunTreeNode {
         TODO("not implemented yet")
+    }
+
+    private fun getRunParameters(testCase: TestCase, testFunction: TestFunction?): List<TestRunParameter> = with(testCase) {
+        when (kind) {
+            TestKind.STANDALONE_NO_TR -> {
+                assertTrue(testFunction == null)
+
+                listOfNotNull(
+                    extras<NoTestRunnerExtras>().inputDataFile?.let(TestRunParameter::WithInputData),
+                    expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
+                )
+            }
+            TestKind.STANDALONE -> listOfNotNull(
+                TestRunParameter.WithGTestLogger,
+                testFunction?.let(TestRunParameter::WithFunctionFilter),
+                expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
+            )
+            TestKind.REGULAR -> listOfNotNull(
+                TestRunParameter.WithGTestLogger,
+                testFunction?.let(TestRunParameter::WithFunctionFilter) ?: TestRunParameter.WithPackageFilter(nominalPackageName),
+                expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
+            )
+        }
     }
 
     // Currently, only local test runner is supported.
