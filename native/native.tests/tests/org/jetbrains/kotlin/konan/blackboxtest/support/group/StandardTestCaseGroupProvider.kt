@@ -6,6 +6,8 @@
 package org.jetbrains.kotlin.konan.blackboxtest.support.group
 
 import org.jetbrains.kotlin.konan.blackboxtest.support.*
+import org.jetbrains.kotlin.konan.blackboxtest.support.TestCase.NoTestRunnerExtras
+import org.jetbrains.kotlin.konan.blackboxtest.support.TestCase.WithTestRunnerExtras
 import org.jetbrains.kotlin.konan.blackboxtest.support.util.DEFAULT_FILE_NAME
 import org.jetbrains.kotlin.konan.blackboxtest.support.util.ThreadSafeFactory
 import org.jetbrains.kotlin.konan.blackboxtest.support.util.computeGeneratedSourcesDir
@@ -190,12 +192,12 @@ internal class StandardTestCaseGroupProvider(private val environment: TestEnviro
             nominalPackageName = nominalPackageName,
             expectedOutputDataFile = expectedOutputDataFile,
             extras = if (testKind == TestKind.STANDALONE_NO_TR) {
-                TestCase.NoTestRunnerExtras(
+                NoTestRunnerExtras(
                     entryPoint = parseEntryPoint(registeredDirectives, location),
                     inputDataFile = parseInputDataFile(baseDir = testDataFile.parentFile, registeredDirectives, location)
                 )
             } else
-                null
+                WithTestRunnerExtras
         )
         testCase.initialize(findSharedModule = null)
 

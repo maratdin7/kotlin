@@ -8,6 +8,7 @@
 package org.jetbrains.kotlin.konan.blackboxtest.support
 
 import com.intellij.openapi.util.Disposer
+import org.jetbrains.kotlin.konan.blackboxtest.support.TestCase.NoTestRunnerExtras
 import org.jetbrains.kotlin.konan.blackboxtest.support.TestCompilationResult.Companion.assertSuccess
 import org.jetbrains.kotlin.konan.blackboxtest.support.group.TestCaseGroupProvider
 import org.jetbrains.kotlin.konan.blackboxtest.support.runner.AbstractRunner
@@ -84,7 +85,7 @@ internal class TestRunProvider(
 
         val runParameters = when (testCase.kind) {
             TestKind.STANDALONE_NO_TR -> listOfNotNull(
-                testCase.extras!!.inputDataFile?.let(TestRunParameter::WithInputData),
+                testCase.extras<NoTestRunnerExtras>().inputDataFile?.let(TestRunParameter::WithInputData),
                 testCase.expectedOutputDataFile?.let(TestRunParameter::WithExpectedOutputData)
             )
             TestKind.STANDALONE -> listOfNotNull(

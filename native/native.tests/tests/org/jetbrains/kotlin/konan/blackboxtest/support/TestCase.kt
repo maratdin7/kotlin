@@ -8,7 +8,6 @@ package org.jetbrains.kotlin.konan.blackboxtest.support
 import org.jetbrains.kotlin.konan.blackboxtest.support.TestModule.Companion.allDependencies
 import org.jetbrains.kotlin.konan.blackboxtest.support.util.*
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
-import org.jetbrains.kotlin.test.services.JUnit5Assertions.assertEquals
 import org.jetbrains.kotlin.test.services.JUnit5Assertions.assertTrue
 import org.jetbrains.kotlin.test.services.JUnit5Assertions.fail
 import java.io.File
@@ -157,13 +156,21 @@ internal class TestCase(
     val origin: TestOrigin.SingleTestDataFile,
     val nominalPackageName: PackageFQN,
     val expectedOutputDataFile: File?,
-    val extras: NoTestRunnerExtras? = null
+    val extras: Extras
 ) {
-    class NoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?)
+    sealed interface Extras
+    class NoTestRunnerExtras(val entryPoint: String, val inputDataFile: File?) : Extras
+    object WithTestRunnerExtras : Extras
 
     init {
-        assertEquals(extras != null, kind == TestKind.STANDALONE_NO_TR)
+        when (kind) {
+            TestKind.STANDALONE_NO_TR -> assertTrue(extras is NoTestRunnerExtras)
+            TestKind.REGULAR, TestKind.STANDALONE -> assertTrue(extras is WithTestRunnerExtras)
+        }
     }
+
+    inline fun <reified T : Extras> extras(): T = extras as T
+    inline fun <reified T : Extras> safeExtras(): T? = extras as? T
 
     // The set of module that have no incoming dependency arcs.
     val rootModules: Set<TestModule.Exclusive> by lazy {
