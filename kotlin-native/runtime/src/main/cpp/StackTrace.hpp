@@ -17,6 +17,26 @@ namespace internal {
 NO_INLINE KStdVector<void*> GetCurrentStackTrace(size_t skipFrames) noexcept;
 NO_INLINE size_t GetCurrentStackTrace(size_t skipFrames, std_support::span<void*> buffer) noexcept;
 
+enum class StackTraceCapacityKind {
+    kFixed, kDynamic
+};
+
+template <StackTraceCapacityKind kind>
+constexpr size_t GetMaxStackTraceDepth() noexcept {
+#if KONAN_NO_BACKTRACE
+    return 0;
+#elif USE_GCC_UNWIND
+    return std::numeric_limits<size_t>::max();
+#else
+    switch (kind) {
+        case StackTraceCapacityKind::kFixed:
+            return 32;
+        case StackTraceCapacityKind::kDynamic:
+            return 128;
+    }
+#endif
+}
+
 }
 
 static constexpr size_t kDynamicCapacity = std::numeric_limits<size_t>::max();
@@ -52,6 +72,12 @@ public:
     std_support::span<void* const> data() const noexcept {
         return std_support::span<void* const>(buffer_.data(), size());
     }
+
+    // Maximal stacktrace depth that can be collected due to implementation limitations.
+    // Note that this limitation doesn't take into account the skipFrames parameter.
+    // I.e. real size of a returned stacktrace will be limited by (maxDepth - skipFrames).
+    static constexpr size_t maxDepth =
+            std::min(internal::GetMaxStackTraceDepth<internal::StackTraceCapacityKind::kFixed>(), Capacity);
 
     NO_INLINE static StackTrace current(size_t skipFrames = 0) noexcept {
         StackTrace result;
@@ -96,6 +122,11 @@ public:
     std_support::span<void* const> data() const noexcept {
         return std_support::span<void* const>(buffer_.data(), size());
     }
+
+    // Maximal stacktrace depth that can be collected due to implementation limitations.
+    // Note that this limitation doesn't take into account the skipFrames parameter.
+    // I.e. real size of a returned stacktrace will be limited by (maxDepth - skipFrames).
+    static constexpr size_t maxDepth = internal::GetMaxStackTraceDepth<internal::StackTraceCapacityKind::kDynamic>();
 
     NO_INLINE static StackTrace current(size_t skipFrames = 0) {
         StackTrace result;

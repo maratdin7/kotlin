@@ -56,6 +56,7 @@ TEST(StackTraceTest, StackTrace) {
     auto stackTrace = GetStackTrace3();
     auto symbolicStackTrace = GetStackTraceStrings(stackTrace.data());
     ASSERT_GT(symbolicStackTrace.size(), 0ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
     EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetStackTrace1"));
     EXPECT_THAT(symbolicStackTrace[1], testing::HasSubstr("GetStackTrace2"));
 }
@@ -65,6 +66,7 @@ TEST(StackTraceTest, StackTraceWithSkip) {
     auto stackTrace = GetStackTrace3(kSkip);
     auto symbolicStackTrace = GetStackTraceStrings(stackTrace.data());
     ASSERT_GT(symbolicStackTrace.size(), 0ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
     EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetStackTrace2"));
     EXPECT_THAT(symbolicStackTrace[1], testing::HasSubstr("GetStackTrace3"));
 }
@@ -73,6 +75,7 @@ TEST(StackTraceTest, StackAllocatedTrace) {
     auto stackTrace = GetStackTrace3<2>();
     auto symbolicStackTrace = GetStackTraceStrings(stackTrace.data());
     ASSERT_EQ(symbolicStackTrace.size(), 2ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
     EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetStackTrace1"));
     EXPECT_THAT(symbolicStackTrace[1], testing::HasSubstr("GetStackTrace2"));
 }
@@ -82,6 +85,7 @@ TEST(StackTraceTest, StackAllocatedTraceWithSkip) {
     auto stackTrace = GetStackTrace3<2>(kSkip);
     auto symbolicStackTrace = GetStackTraceStrings(stackTrace.data());
     ASSERT_EQ(symbolicStackTrace.size(), 2ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
     EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetStackTrace2"));
     EXPECT_THAT(symbolicStackTrace[1], testing::HasSubstr("GetStackTrace3"));
 }
@@ -94,6 +98,7 @@ TEST(StackTraceTest, EmptyStackTrace) {
     EXPECT_EQ(data.size(), 0ul);
     auto symbolicStackTrace = GetStackTraceStrings(data);
     EXPECT_EQ(symbolicStackTrace.size(), 0ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
 }
 
 TEST(StackTraceTest, StackAllocatedEmptyTrace) {
@@ -104,20 +109,25 @@ TEST(StackTraceTest, StackAllocatedEmptyTrace) {
     EXPECT_EQ(data.size(), 0ul);
     auto symbolicStackTrace = GetStackTraceStrings(data);
     EXPECT_EQ(symbolicStackTrace.size(), 0ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
 }
 
 TEST(StackTraceTest, DeepStackTrace) {
-    constexpr size_t knownStackDepth = 100;
+    constexpr size_t knownStackDepth = 150;
     auto stackTrace = GetDeepStackTrace(knownStackDepth);
     auto symbolicStackTrace = GetStackTraceStrings(stackTrace.data());
 
-    ASSERT_GT(symbolicStackTrace.size(), 0ul);
-    EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetDeepStackTrace"));
+#if USE_GCC_UNWIND
+    ASSERT_GE(stackTrace.size(), knownStackDepth);
+#else
+    // For platforms where the libc unwind is used (e.g. MacOS) the size of a collected trace is limited (see StackTrace::maxDepth).
+    ASSERT_EQ(stackTrace.size(), StackTrace<>::maxDepth);
+#endif
 
-    // Note that for platforms where libc unwind is used (e.g. MacOS) the size of a collected trace is limited.
-    // See kotlin::internal::GetCurrentStackTrace(size_t skipFrames) for details.
-    EXPECT_GT(symbolicStackTrace.size(), knownStackDepth);
-    EXPECT_THAT(symbolicStackTrace[knownStackDepth - 1], testing::HasSubstr("GetDeepStackTrace"));
+    ASSERT_GT(symbolicStackTrace.size(), 0ul);
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
+    EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetDeepStackTrace"));
+    EXPECT_THAT(symbolicStackTrace[symbolicStackTrace.size() - 1], testing::HasSubstr("GetDeepStackTrace"));
 }
 
 TEST(StackTraceTest, StackAllocatedDeepTrace) {
@@ -127,10 +137,25 @@ TEST(StackTraceTest, StackAllocatedDeepTrace) {
     auto symbolicStackTrace = GetStackTraceStrings(stackTrace.data());
 
     ASSERT_GT(symbolicStackTrace.size(), 0ul);
-    EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetDeepStackTrace"));
-
+    EXPECT_EQ(symbolicStackTrace.size(), stackTrace.size());
     EXPECT_EQ(symbolicStackTrace.size(), capacity);
-    EXPECT_THAT(symbolicStackTrace[capacity - 1], testing::HasSubstr("GetDeepStackTrace"));
+    EXPECT_EQ(StackTrace<capacity>::maxDepth, capacity);
+
+    EXPECT_THAT(symbolicStackTrace[0], testing::HasSubstr("GetDeepStackTrace"));
+    EXPECT_THAT(symbolicStackTrace[symbolicStackTrace.size() - 1], testing::HasSubstr("GetDeepStackTrace"));
+}
+
+TEST(StackTraceTest, StackAllocatedDeepTraceWithEnoughCapacity) {
+    constexpr size_t knownStackDepth = 100;
+    constexpr size_t capacity = 150;
+    auto stackTrace = GetDeepStackTrace<capacity>(knownStackDepth);
+
+#if USE_GCC_UNWIND
+    EXPECT_GE(stackTrace.size(), knownStackDepth);
+#else
+    // For platforms where the libc unwind is used (e.g. MacOS) the size of a collected trace is limited (see StackTrace::maxDepth).
+    EXPECT_EQ(stackTrace.size(), StackTrace<capacity>::maxDepth);
+#endif
 }
 
 TEST(StackTraceTest, Iteration) {

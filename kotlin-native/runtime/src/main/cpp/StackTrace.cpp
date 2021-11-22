@@ -116,7 +116,8 @@ NO_INLINE KStdVector<void*> kotlin::internal::GetCurrentStackTrace(size_t skipFr
 
     return result;
 #else
-    constexpr size_t maxSize = 128;
+    // Take into account this function and StackTrace::current.
+    constexpr size_t maxSize = GetMaxStackTraceDepth<StackTraceCapacityKind::kDynamic>() + 2;
     result.resize(maxSize);
     auto size = static_cast<size_t>(backtrace(result.data(), static_cast<int>(result.size())));
     if (size <= kSkipFrames) return {};
@@ -149,9 +150,10 @@ NO_INLINE size_t kotlin::internal::GetCurrentStackTrace(size_t skipFrames, std_s
     _Unwind_Backtrace(unwindCallback, static_cast<void*>(&traceHolder));
     return traceHolder.currentSize;
 #else
-    constexpr int maxSize = 32;
+    // Take into account this function and StackTrace::current.
+    constexpr size_t maxSize = GetMaxStackTraceDepth<StackTraceCapacityKind::kFixed>() + 2;
     void* tmpBuffer[maxSize];
-    size_t size = backtrace(tmpBuffer, maxSize);
+    size_t size = backtrace(tmpBuffer, static_cast<int>(maxSize));
     if (size <= kSkipFrames) return 0;
 
     size_t elementsCount = std::min(buffer.size(), size - kSkipFrames);
