@@ -19,6 +19,7 @@ class Impl extends AC {
     get y(): boolean { return true; }
 }
 
+// TODO: Uncomment with fix of export open properties
 // class A2Impl extends A2 {
 //     bar: string = "barA2"
 //     readonly baz: string = "bazA2"

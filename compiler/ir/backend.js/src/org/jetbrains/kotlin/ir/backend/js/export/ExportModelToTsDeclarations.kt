@@ -219,7 +219,7 @@ fun ExportedClass.withProtectedConstructors(): ExportedClass {
         if (it !is ExportedConstructor || it.isProtected) {
             it
         } else {
-            it.copy(visibility = Visibility.PROTECTED)
+            it.copy(visibility = ExportedVisibility.PROTECTED)
         }
     })
 }

@@ -104,7 +104,7 @@ class ExportModelGenerator(
                 constructor.valueParameters.filterNot { it.origin === ES6_RESULT_TYPE_PARAMETER || it.origin === ES6_INIT_BOX_PARAMETER }
         return ExportedConstructor(
             parameters = allValueParameters.map { exportParameter(it) },
-            visibility = constructor.visibility.toVisibility()
+            visibility = constructor.visibility.toExportedVisibility()
         )
     }
 
@@ -263,7 +263,7 @@ class ExportModelGenerator(
 
         val privateConstructor = ExportedConstructor(
             parameters = emptyList(),
-            visibility = Visibility.PRIVATE
+            visibility = ExportedVisibility.PRIVATE
         )
 
         return exportClass(
@@ -658,10 +658,10 @@ fun IrDeclaration.isExported(context: JsIrBackendContext?): Boolean {
     return shouldDeclarationBeExported(candidate, context)
 }
 
-private fun DescriptorVisibility.toVisibility() =
+private fun DescriptorVisibility.toExportedVisibility() =
     when (this) {
-        DescriptorVisibilities.PROTECTED -> Visibility.PROTECTED
-        else -> Visibility.DEFAULT
+        DescriptorVisibilities.PROTECTED -> ExportedVisibility.PROTECTED
+        else -> ExportedVisibility.DEFAULT
     }
 
 private val reservedWords = setOf(
