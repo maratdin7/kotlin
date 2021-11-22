@@ -60,6 +60,10 @@ class JvmIdSignatureDescriptor(mangler: KotlinMangler.DescriptorMangler) : IdSig
             computeStoredFileSignature(descriptor)
         }
 
+        override fun platformSpecificAlias(descriptor: TypeAliasDescriptor) {
+            computeStoredFileSignature(descriptor)
+        }
+
         override fun platformSpecificModule(descriptor: ModuleDescriptor) {
 
         }
