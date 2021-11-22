@@ -1,6 +1,7 @@
 // !LANGUAGE: +NewInference
 // !DIAGNOSTICS: -UNUSED_EXPRESSION
 // SKIP_TXT
+// WITH_EXTENDED_CHECKERS
 
 // TESTCASE NUMBER: 1
 fun case_1(x: Any?) {

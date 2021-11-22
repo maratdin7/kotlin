@@ -1,4 +1,5 @@
 // FIR_IDENTICAL
+// WITH_EXTENDED_CHECKERS
 @Target(AnnotationTarget.TYPE)
 annotation class Ann
 

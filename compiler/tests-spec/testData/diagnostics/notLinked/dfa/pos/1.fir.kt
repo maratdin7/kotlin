@@ -1,6 +1,7 @@
 // !LANGUAGE: +NewInference
 // !DIAGNOSTICS: -UNUSED_EXPRESSION
 // SKIP_TXT
+// TODO: https://youtrack.jetbrains.com/issue/KT-49862
 
 /*
  * KOTLIN DIAGNOSTICS NOT LINKED SPEC TEST (POSITIVE)
@@ -151,7 +152,7 @@ fun case_8(x: TypealiasNullableString) {
 }
 
 // TESTCASE NUMBER: 9
-fun case_9(x: TypealiasNullableString<!REDUNDANT_NULLABLE!>?<!>) {
+fun case_9(x: TypealiasNullableString?) {
     if (x === null) {
 
     } else if (false) {
@@ -189,7 +190,7 @@ fun case_10() {
 }
 
 // TESTCASE NUMBER: 11
-fun case_11(x: TypealiasNullableStringIndirect<!REDUNDANT_NULLABLE!>?<!>, y: TypealiasNullableStringIndirect) {
+fun case_11(x: TypealiasNullableStringIndirect?, y: TypealiasNullableStringIndirect) {
     val t: TypealiasNullableStringIndirect = null
 
     if (x == null) {
@@ -248,7 +249,7 @@ fun case_13(x: otherpackage.Case13?) =
 
 // TESTCASE NUMBER: 14
 class Case14 {
-    val x: otherpackage.Case14<!REDUNDANT_NULLABLE!>?<!>
+    val x: otherpackage.Case14?
     init {
         x = otherpackage.Case14()
     }
