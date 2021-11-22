@@ -244,9 +244,9 @@ abstract class XCFrameworkTask : DefaultTask() {
             buildType: NativeBuildType,
             appleTarget: AppleTarget? = null
         ) = project.buildDir
-            .resolve("out/fatframework")
+            .resolve(xcFrameworkName + "XCFrameworkTemp")
+            .resolve("fatframework")
             .resolve(buildType.getName())
-            .resolve(xcFrameworkName)
             .resolveIfNotNull(appleTarget?.targetName)
 
         private fun File.resolveIfNotNull(relative: String?): File = if (relative == null) this else this.resolve(relative)

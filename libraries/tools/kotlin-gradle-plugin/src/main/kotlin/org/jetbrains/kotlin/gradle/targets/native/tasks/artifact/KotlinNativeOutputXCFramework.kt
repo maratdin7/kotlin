@@ -63,7 +63,8 @@ class XCFramework : KotlinNativeLibraryArtifact() {
                     buildType,
                     librariesConfigurationName,
                     exportConfigurationName,
-                    embedBitcode
+                    embedBitcode,
+                    "${name}XCFrameworkTemp"
                 )
                 holder.task.dependsOn(targetTask)
                 val frameworkFileProvider = targetTask.map { it.outputFile }

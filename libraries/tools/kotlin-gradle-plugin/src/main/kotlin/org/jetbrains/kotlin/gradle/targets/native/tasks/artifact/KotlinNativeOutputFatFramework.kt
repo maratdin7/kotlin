@@ -67,7 +67,8 @@ class FatFramework : KotlinNativeLibraryArtifact() {
                     buildType,
                     librariesConfigurationName,
                     exportConfigurationName,
-                    embedBitcode
+                    embedBitcode,
+                    "${name}FatFrameworkTemp"
                 )
                 fatTask.dependsOn(targetTask)
                 val frameworkFileProvider = targetTask.map { it.outputFile }

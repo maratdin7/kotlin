@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.konan.target.presetName
 import org.jetbrains.kotlin.konan.util.visibleName
+import java.io.File
 
 class Framework : KotlinNativeLibraryArtifact() {
     lateinit var target: KonanTarget
@@ -73,9 +74,11 @@ internal fun KotlinNativeLibraryArtifact.registerLinkFrameworkTask(
     buildType: NativeBuildType,
     librariesConfigurationName: String,
     exportConfigurationName: String,
-    embedBitcode: BitcodeEmbeddingMode?
+    embedBitcode: BitcodeEmbeddingMode?,
+    outDirName: String = "out"
 ): TaskProvider<KotlinNativeLinkArtifactTask> {
     val kind = NativeOutputKind.FRAMEWORK
+    val destinationDir = project.buildDir.resolve("$outDirName/${kind.visibleName}/${target.visibleName}/${buildType.visibleName}")
     val resultTask = project.registerTask<KotlinNativeLinkArtifactTask>(
         lowerCamelCaseName("assemble", buildType.visibleName, kind.taskNameClassifier, name, target.presetName),
         listOf(target, kind.compilerOutputKind)
@@ -83,6 +86,7 @@ internal fun KotlinNativeLibraryArtifact.registerLinkFrameworkTask(
         task.description = "Assemble ${kind.description} '$name' for a target '${target.name}'."
         task.enabled = target.enabledOnCurrentHost && kind.availableFor(target)
         task.baseName = name
+        task.destinationDir = destinationDir
         task.optimized = buildType.optimized
         task.debuggable = buildType.debuggable
         task.linkerOptions = linkerOptions
