@@ -19,6 +19,7 @@ package org.jetbrains.kotlinx.atomicfu.gradle
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtensionAware
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.plugin.*
@@ -27,21 +28,27 @@ import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTarget
 import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 import org.jetbrains.kotlin.gradle.dsl.*
 
-@Suppress("DEPRECATION")
 class AtomicfuKotlinGradleSubplugin :
+    KotlinCompilerPluginSupportPlugin,
     @Suppress("DEPRECATION_ERROR") // implementing to fix KT-39809
     KotlinGradleSubplugin<AbstractCompile> {
     companion object {
         const val ATOMICFU_ARTIFACT_NAME = "atomicfu"
     }
 
-    override fun isApplicable(project: Project, task: AbstractCompile): Boolean =
-        task is Kotlin2JsCompile && project.hasIrTargets()
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
+        kotlinCompilation.target.isJsIrTarget()
+
+    override fun applyToCompilation(
+        kotlinCompilation: KotlinCompilation<*>
+    ): Provider<List<SubpluginOption>> {
+        return kotlinCompilation.target.project.provider { emptyList<SubpluginOption>() }
+    }
 
     private fun Project.hasIrTargets(): Boolean {
         extensions.findByType(KotlinProjectExtension::class.java)?.let { kotlinExtension ->
             if (kotlinExtension is KotlinJsProjectExtension) {
-                if (kotlinExtension.target.isJsIrTarget()) {
+                if (kotlinExtension.js().isJsIrTarget()) {
                     return true
                 }
             }
@@ -60,6 +67,14 @@ class AtomicfuKotlinGradleSubplugin :
     private fun KotlinTarget.isJsIrTarget(): Boolean =
         (this is KotlinJsTarget && this.irTarget != null) || this is KotlinJsIrTarget
 
+    override fun getPluginArtifact(): SubpluginArtifact =
+        JetBrainsSubpluginArtifact(ATOMICFU_ARTIFACT_NAME)
+
+    override fun getCompilerPluginId() = "org.jetbrains.kotlinx.atomicfu"
+
+    //region Stub implementation for legacy API, KT-39809
+    override fun isApplicable(project: Project, task: AbstractCompile): Boolean =
+        task is Kotlin2JsCompile && project.hasIrTargets()
 
     override fun apply(
         project: Project,
@@ -71,9 +86,5 @@ class AtomicfuKotlinGradleSubplugin :
     ): List<SubpluginOption> {
         return emptyList()
     }
-
-    override fun getPluginArtifact(): SubpluginArtifact =
-        JetBrainsSubpluginArtifact(ATOMICFU_ARTIFACT_NAME)
-
-    override fun getCompilerPluginId() = "org.jetbrains.kotlinx.atomicfu"
+    //endregion
 }
