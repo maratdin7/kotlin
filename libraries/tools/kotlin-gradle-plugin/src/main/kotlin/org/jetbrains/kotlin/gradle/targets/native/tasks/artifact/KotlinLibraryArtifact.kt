@@ -91,6 +91,15 @@ abstract class KotlinNativeLibraryArtifact : KotlinLibraryArtifact() {
     }
 }
 
+@RequiresOptIn(
+    message = "This API is experimental. It may be changed in the future.",
+    level = RequiresOptIn.Level.WARNING
+)
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.FUNCTION)
+annotation class ExperimentalLibraryDsl
+
+@ExperimentalLibraryDsl
 fun <T : KotlinLibraryArtifact> Project.kotlinLibraryArtifact(name: String, artifact: T, configure: T.() -> Unit) {
     artifact.addModule(this)
     configure(artifact)
