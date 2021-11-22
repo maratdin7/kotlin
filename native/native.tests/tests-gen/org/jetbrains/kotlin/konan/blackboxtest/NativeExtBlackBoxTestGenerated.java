@@ -15995,7 +15995,7 @@ public class NativeExtBlackBoxTestGenerated extends AbstractNativeBlackBoxTest {
         @Nested
         @TestMetadata("compiler/testData/codegen/box/extensionClasses")
         @TestDataPath("$PROJECT_ROOT")
-        @CustomNativeBlackBoxTestCaseGroupProvider(ExtTestCaseGroupProvider.class)
+        @NativeBlackBoxTestCaseGroupProvider(ExtTestCaseGroupProvider.class)
         public class ExtensionClasses {
             @Test
             public void testAllFilesPresentInExtensionClasses() throws Exception {
@@ -16232,7 +16232,7 @@ public class NativeExtBlackBoxTestGenerated extends AbstractNativeBlackBoxTest {
             @Nested
             @TestMetadata("compiler/testData/codegen/box/extensionFunctions/contextReceivers")
             @TestDataPath("$PROJECT_ROOT")
-            @CustomNativeBlackBoxTestCaseGroupProvider(ExtTestCaseGroupProvider.class)
+            @NativeBlackBoxTestCaseGroupProvider(ExtTestCaseGroupProvider.class)
             public class ContextReceivers {
                 @Test
                 public void testAllFilesPresentInContextReceivers() throws Exception {
@@ -16368,7 +16368,7 @@ public class NativeExtBlackBoxTestGenerated extends AbstractNativeBlackBoxTest {
                 @Nested
                 @TestMetadata("compiler/testData/codegen/box/extensionFunctions/contextReceivers/fromKEEP")
                 @TestDataPath("$PROJECT_ROOT")
-                @CustomNativeBlackBoxTestCaseGroupProvider(ExtTestCaseGroupProvider.class)
+                @NativeBlackBoxTestCaseGroupProvider(ExtTestCaseGroupProvider.class)
                 public class FromKEEP {
                     @Test
                     public void testAllFilesPresentInFromKEEP() throws Exception {
