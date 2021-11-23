@@ -28,6 +28,8 @@ import java.io.File
 import java.util.Properties
 import org.jetbrains.kotlin.compilerRunner.KotlinToolRunner
 import org.jetbrains.kotlin.konan.target.AbstractToolConfig
+import java.net.URLClassLoader
+import java.util.concurrent.ConcurrentHashMap
 
 internal interface KonanToolRunner {
     fun run(args: List<String>)
@@ -68,10 +70,15 @@ internal abstract class KonanCliRunner(
             """.trimIndent()
             }
 
-    data class IsolatedClassLoaderCacheKey(val classpath: Set<java.io.File>, val project: Project)
+    data class IsolatedClassLoaderCacheKey(val classpath: Set<File>)
 
     // TODO: can't we use this for other implementations too?
-    final override val isolatedClassLoaderCacheKey get() = IsolatedClassLoaderCacheKey(classpath, project)
+    final override val isolatedClassLoaderCacheKey get() = IsolatedClassLoaderCacheKey(classpath)
+
+    // A separate map for each build for automatic cleaning the daemon after the build have finished.
+    @Suppress("UNCHECKED_CAST")
+    final override val isolatedClassLoaders get() =
+        project.project(":kotlin-native").ext["toolClassLoadersMap"] as ConcurrentHashMap<Any, URLClassLoader>
 
     override fun transformArgs(args: List<String>) = listOf(toolName) + args
 
