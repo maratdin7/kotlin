@@ -724,12 +724,21 @@ class GeneralNativeIT : BaseGradleIT() {
             fun assertTestResultsAnyOf(
                 @TestDataFile assertionFile1Name: String,
                 @TestDataFile assertionFile2Name: String,
+                @TestDataFile assertionFile3Name: String?,
                 vararg testReportNames: String
             ) {
                 try {
                     assertTestResults(assertionFile1Name, *testReportNames)
                 } catch (e: AssertionError) {
-                    assertTestResults(assertionFile2Name, *testReportNames)
+                    if (assertionFile3Name == null)
+                        assertTestResults(assertionFile2Name, *testReportNames)
+                    else {
+                        try {
+                            assertTestResults(assertionFile2Name, *testReportNames)
+                        } catch (e: AssertionError) {
+                            assertTestResults(assertionFile3Name, *testReportNames)
+                        }
+                    }
                 }
             }
 
@@ -746,6 +755,7 @@ class GeneralNativeIT : BaseGradleIT() {
                 listOf(
                     "testProject/native-tests/TEST-TestKt.xml",
                     "testProject/native-tests/TEST-TestKt-iOSsim.xml",
+                    "testProject/native-tests/TEST-TestKt-iOSsim_wWarn.xml",
                 )
             }
             assertTestResults(expectedTestResults.first(), hostTestTask)
@@ -756,6 +766,7 @@ class GeneralNativeIT : BaseGradleIT() {
                 assertTestResultsAnyOf(
                     expectedTestResults[0],
                     expectedTestResults[1],
+                    if (expectedTestResults.size == 2) null else expectedTestResults[2],
                     "iosTest"
                 )
                 assertStacktrace("iosTest", "ios")
