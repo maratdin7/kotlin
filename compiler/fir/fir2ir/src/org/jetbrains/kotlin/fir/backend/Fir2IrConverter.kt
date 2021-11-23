@@ -218,6 +218,34 @@ class Fir2IrConverter(
         }
     }
 
+    fun checkFakeOverridesInFile(file: FirFile) {
+        val irFile = declarationStorage.getIrFile(file)
+        for (irDeclaration in irFile.declarations) {
+            if (irDeclaration is IrClass) {
+                checkFakeOverridesInClass(irDeclaration)
+            }
+        }
+    }
+
+    fun checkFakeOverridesInClass(klass: IrClass) {
+        for (declaration in klass.declarations) {
+            if (declaration !is IrOverridableDeclaration<*> || declaration.origin != IrDeclarationOrigin.FAKE_OVERRIDE) continue
+            declaration.dfs()
+        }
+        for (irDeclaration in klass.declarations) {
+            if (irDeclaration is IrClass) {
+                checkFakeOverridesInClass(irDeclaration)
+            }
+        }
+    }
+
+    private fun IrOverridableDeclaration<*>.dfs(visited: MutableSet<IrOverridableDeclaration<*>> = mutableSetOf()) {
+        if (this in visited) throw AssertionError()
+        visited += this
+        overriddenSymbols.forEach { (it.owner as IrOverridableDeclaration<*>).dfs(visited) }
+        visited -= this
+    }
+
     private fun delegatedMembers(irClass: IrClass): List<FirDeclaration> {
         return irClass.declarations.filter {
             it.origin == IrDeclarationOrigin.DELEGATED_MEMBER
@@ -416,6 +444,10 @@ class Fir2IrConverter(
             //   If we encounter local class / anonymous object here, then we perform all (1)-(5) stages immediately
             for (firFile in allFirFiles) {
                 firFile.accept(fir2irVisitor, null)
+            }
+
+            for (firFile in allFirFiles) {
+                converter.checkFakeOverridesInFile(firFile)
             }
 
             externalDependenciesGenerator.generateUnboundSymbolsAsDependencies()
