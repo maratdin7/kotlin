@@ -36,8 +36,13 @@ class AtomicfuKotlinGradleSubplugin :
         const val ATOMICFU_ARTIFACT_NAME = "atomicfu"
     }
 
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
-        kotlinCompilation.target.isJsIrTarget()
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
+        if (kotlinCompilation.platformType == KotlinPlatformType.js) {
+            println("------ AtomicfuKotlinGradleSubplugin applied -----")
+            println("target = ${kotlinCompilation.target}, target.isJsIr = ${kotlinCompilation.target.isJsIrTarget()}, kotlinCompilation = $kotlinCompilation, moduleName = ${kotlinCompilation.moduleName}")
+        }
+        return true
+    }
 
     override fun applyToCompilation(
         kotlinCompilation: KotlinCompilation<*>
@@ -56,6 +61,14 @@ class AtomicfuKotlinGradleSubplugin :
             @Suppress("UNCHECKED_CAST")
             if (targetsExtension != null) {
                 val targets = targetsExtension as NamedDomainObjectContainer<KotlinTarget>
+                targets.forEach { target ->
+                    if (target.isJsIrTarget()) {
+                        target.compilations.forEach {
+                            println("------ AtomicfuKotlinGradleSubplugin applied -----")
+                            println("target = $target, target.isJsIr = ${target.isJsIrTarget()}, compilation = $it, moduleName = ${it.moduleName}")
+                        }
+                    }
+                }
                 if (targets.any { it.isJsIrTarget() }) {
                     return true
                 }
